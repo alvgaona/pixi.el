@@ -57,6 +57,27 @@
   :type 'boolean
   :group 'pixi)
 
+(defcustom pixi-show-modeline t
+  "Whether to show pixi status in the modeline."
+  :type 'boolean
+  :group 'pixi)
+
+(defcustom pixi-modeline-show-project t
+  "Whether to show project name in the modeline."
+  :type 'boolean
+  :group 'pixi)
+
+(defcustom pixi-modeline-show-environment t
+  "Whether to show environment name in the modeline."
+  :type 'boolean
+  :group 'pixi)
+
+(defcustom pixi-modeline-prefix "pixi"
+  "Prefix string to show in the modeline. Set to nil to hide."
+  :type '(choice (string :tag "Prefix")
+                 (const :tag "None" nil))
+  :group 'pixi)
+
 ;;; Internal variables
 
 (defvar pixi--original-process-environment nil
@@ -83,10 +104,16 @@
 
 (defun pixi--modeline-string ()
   "Return the modeline string for pixi status."
-  (when pixi--current-project
-    (format " [pixi:%s:%s]"
-            (file-name-nondirectory (directory-file-name pixi--current-project))
-            pixi--current-environment)))
+  (when (and pixi-show-modeline pixi--current-project)
+    (let ((parts '()))
+      (when pixi-modeline-prefix
+        (setq parts (append parts (list pixi-modeline-prefix))))
+      (when pixi-modeline-show-project
+        (setq parts (append parts (list (file-name-nondirectory (directory-file-name pixi--current-project))))))
+      (when pixi-modeline-show-environment
+        (setq parts (append parts (list pixi--current-environment))))
+      (when parts
+        (format " %s" (string-join parts ":"))))))
 
 (defvar pixi-mode-line
   '(:eval (pixi--modeline-string))
@@ -94,7 +121,20 @@
 
 (put 'pixi-mode-line 'risky-local-variable t)
 
-(add-to-list 'mode-line-misc-info 'pixi-mode-line t)
+(defun pixi-modeline-enable ()
+  "Enable pixi modeline indicator."
+  (interactive)
+  (setq pixi-show-modeline t)
+  (add-to-list 'mode-line-misc-info 'pixi-mode-line t))
+
+(defun pixi-modeline-disable ()
+  "Disable pixi modeline indicator."
+  (interactive)
+  (setq pixi-show-modeline nil)
+  (setq mode-line-misc-info (delete 'pixi-mode-line mode-line-misc-info)))
+
+(when pixi-show-modeline
+  (add-to-list 'mode-line-misc-info 'pixi-mode-line t))
 
 ;;; Detection functions
 
@@ -253,6 +293,23 @@ ENV-NAME specifies the environment (\"default\" if nil)."
     ;; Activate with new environment
     (pixi-activate root env-name)))
 
+;;; Display buffer
+
+(defun pixi--display-buffer (title content)
+  "Display CONTENT with TITLE in the *pixi* buffer (read-only)."
+  (with-current-buffer (get-buffer-create "*pixi*")
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (insert title)
+      (insert "\n\n")
+      (if (listp content)
+          (dolist (item content)
+            (insert (format "  %s\n" item)))
+        (insert content)))
+    (goto-char (point-min))
+    (special-mode)
+    (display-buffer (current-buffer))))
+
 ;;; Interactive commands
 
 (defun pixi-info ()
@@ -260,9 +317,11 @@ ENV-NAME specifies the environment (\"default\" if nil)."
   (interactive)
   (let ((root (pixi--find-project-root)))
     (if root
-        (message "Pixi project: %s (type: %s)"
+        (pixi--display-buffer
+         "Pixi Project Information"
+         (format "Project: %s\nType: %s"
                  root
-                 (pixi--project-type root))
+                 (pixi--project-type root)))
       (message "Not in a pixi project"))))
 
 (defun pixi-list-environments ()
@@ -270,11 +329,12 @@ ENV-NAME specifies the environment (\"default\" if nil)."
   (interactive)
   (let ((envs (pixi--list-environments)))
     (if envs
-        (message "Environments: %s%s"
-                 (string-join envs ", ")
-                 (if pixi--current-environment
-                     (format " [active: %s]" pixi--current-environment)
-                   ""))
+        (pixi--display-buffer
+         "Pixi Environments"
+         (append
+          envs
+          (when pixi--current-environment
+            (list (format "\nActive: %s" pixi--current-environment)))))
       (message "No environments found (not in a pixi project?)"))))
 
 (defun pixi-list-tasks ()
@@ -283,7 +343,7 @@ ENV-NAME specifies the environment (\"default\" if nil)."
   (if (pixi--find-project-root)
       (let ((tasks (pixi--list-tasks)))
         (if tasks
-            (message "Tasks: %s" (string-join tasks ", "))
+            (pixi--display-buffer "Pixi Tasks" tasks)
           (message "No tasks defined")))
     (message "Not in a pixi project")))
 
@@ -313,12 +373,24 @@ ENV-NAME specifies the environment (\"default\" if nil)."
 
 ;;; Package management
 
+(defun pixi--setup-output-buffer ()
+  "Set up the *pixi* buffer with special-mode after command completes."
+  (when-let ((buffer (get-buffer "*pixi*"))
+             (process (get-buffer-process buffer)))
+    (set-process-sentinel
+     process
+     (lambda (proc _event)
+       (when (memq (process-status proc) '(exit signal))
+         (with-current-buffer (process-buffer proc)
+           (special-mode)))))))
+
 (defun pixi--run-command (args)
   "Run pixi with ARGS and display output in *pixi* buffer."
   (let* ((root (pixi--find-project-root))
          (default-directory (or root default-directory))
          (cmd (format "%s %s" pixi-executable args)))
-    (async-shell-command cmd "*pixi*")))
+    (async-shell-command cmd "*pixi*")
+    (pixi--setup-output-buffer)))
 
 (defun pixi-add (package &optional feature)
   "Add PACKAGE as a dependency, optionally to FEATURE."
