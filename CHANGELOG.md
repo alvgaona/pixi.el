@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0] - 2026-01-08
+
+### Features
+
+#### Modeline Configuration
+- `pixi-show-modeline` - Toggle modeline indicator visibility
+- `pixi-modeline-show-project` - Toggle project name in modeline
+- `pixi-modeline-show-environment` - Toggle environment name in modeline
+- `pixi-modeline-prefix` - Customize or hide the "pixi" prefix
+- `pixi-modeline-enable` / `pixi-modeline-disable` - Interactive commands to toggle modeline
+
+#### Improved Display
+- `pixi-info`, `pixi-list-environments`, and `pixi-list-tasks` now display output in a dedicated `*pixi*` buffer instead of the minibuffer
+
 ## [0.1.0] - 2025-01-04
 
 Initial release.
