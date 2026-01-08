@@ -14,6 +14,9 @@
 #### Improved Display
 - `pixi-info`, `pixi-list-environments`, and `pixi-list-tasks` now display output in a dedicated `*pixi*` buffer instead of the minibuffer
 
+#### Integrations
+- lsp-mode auto-restart on environment change (matches existing Eglot behavior)
+
 ## [0.1.0] - 2025-01-04
 
 Initial release.

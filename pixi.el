@@ -22,7 +22,7 @@
 ;; - Task running with completion (pixi-run-task, pixi-run)
 ;; - Package management (pixi-add, pixi-remove, pixi-install, etc.)
 ;; - Workspace commands (channels, platforms, features)
-;; - Eglot/LSP auto-restart on environment change
+;; - Eglot and lsp-mode auto-restart on environment change
 ;; - Hooks for customization
 ;;
 ;; Basic usage:
@@ -484,6 +484,17 @@ ENV-NAME specifies the environment (\"default\" if nil)."
       (eglot-reconnect server))))
 
 (add-hook 'pixi-activate-hook #'pixi--restart-eglot)
+
+;;; lsp-mode integration
+
+(defun pixi--restart-lsp-mode ()
+  "Restart lsp-mode workspaces to pick up new environment."
+  (when (and (fboundp 'lsp-workspaces)
+             (lsp-workspaces))
+    (dolist (workspace (lsp-workspaces))
+      (lsp-workspace-restart workspace))))
+
+(add-hook 'pixi-activate-hook #'pixi--restart-lsp-mode)
 
 ;;; Auto-activation
 

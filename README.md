@@ -10,7 +10,7 @@ Emacs integration for [Pixi](https://pixi.sh), the fast cross-platform package m
 - **Task running**: Run tasks with completion and arguments
 - **Package management**: Add, remove, install, update packages
 - **Workspace commands**: Manage channels, platforms, and features
-- **Eglot integration**: Auto-restart LSP when switching environments
+- **LSP integration**: Auto-restart Eglot and lsp-mode when switching environments
 - **Hooks**: Customize behavior with `pixi-activate-hook`, `pixi-deactivate-hook`, `pixi-pre-run-hook`
 
 ## Installation
@@ -94,7 +94,17 @@ Clone the repository and add to your `load-path`:
 
 ;; Custom pixi executable path (auto-detected by default)
 (setq pixi-executable "/path/to/pixi")
+
+;; Modeline customization
+(setq pixi-show-modeline t)              ; Toggle modeline indicator
+(setq pixi-modeline-show-project t)      ; Show project name
+(setq pixi-modeline-show-environment t)  ; Show environment name
+(setq pixi-modeline-prefix "pixi")       ; Prefix string (or nil to hide)
 ```
+
+You can also toggle the modeline interactively:
+- `M-x pixi-modeline-enable` - Enable modeline indicator
+- `M-x pixi-modeline-disable` - Disable modeline indicator
 
 ## Hooks
 
